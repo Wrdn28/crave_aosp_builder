@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-name: Crave Builder
+name: TWRP Builder(Legacy)
 on:
   workflow_dispatch:
     # Various inputs to simplify usage of workflow.
@@ -13,17 +13,10 @@ on:
       BASE_PROJECT:
         description: 'Choose a base project:'
         required: true
-        default: 'LineageOS 20.0'
+        default: 'TWRP 12.1'
         type: choice
         options:
-          - 'LineageOS 20.0'
-          - 'LineageOS 21.0'
-          - 'ArrowOS 13.1'
-          - 'DerpFest 13.0'
-          - 'CipherOS 14'
-          - 'PixelOS 14'
-          - 'LineageOS 16.0'
-          - 'CyanogenMOD 14.1'
+          - 'TWRP 12.1'
       BUILD_DIFFERENT_ROM:
         description: "Command to initialize a different 'repo' project:"
         required: false
@@ -34,23 +27,23 @@ on:
       LOCAL_MANIFEST:
         description: "Personal local manifest [repository or raw]:"
         required: true
-        default: 'https://github.com/HK-ginkgo/local_manifest'
+        default: 'https://github.com/sounddrill31/local_manifests'
       LOCAL_MANIFEST_BRANCH:
         description: "Personal local manifest's branch:"
         required: false
-        default: 'main'
+        default: 'lineage-oxygen'
       DEVICE_NAME:
         description: "Device's codename:"
         required: true
-        default: "ginkgo"
+        default: "oxygen"
       PRODUCT_NAME:
         description: "Product to build:"
         required: true
-        default: "lineage_ginkgo"
+        default: "lineage_oxygen"
       BUILD_COMMAND:
         description: 'Command to be used for compiling:'
         required: true
-        default: 'mka bacon'
+        default: 'make recoveryimage'
       BUILD_TYPE:
         description: 'Type of build:'
         required: true
@@ -78,46 +71,10 @@ jobs:
       id: proj-variables
       run: |
         case "${{ github.event.inputs.BASE_PROJECT }}" in
-        "ArrowOS 13.1")
-          export PROJECTFOLDER="/crave-devspaces/Arrow13"
-          export PROJECTID="73"
-          export REPO_INIT="repo init -u https://github.com/ArrowOS/android_manifest.git -b arrow-13.1 --depth=1"
-
-        ;;
-        "DerpFest 13.0")
-          export PROJECTFOLDER="/crave-devspaces/DerpFest13"
-          export PROJECTID="64"
-          export REPO_INIT="repo init -u https://github.com/DerpFest-AOSP/manifest.git -b 13 --depth=1"
-        ;;
-        "LineageOS 21.0")
-          export PROJECTFOLDER="/crave-devspaces/Lineage21"
-          export PROJECTID="72"
-          export REPO_INIT="repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --git-lfs --depth=1"
-        ;;
-        "LineageOS 20.0")
-          export PROJECTFOLDER="/crave-devspaces/Lineage20"
-          export PROJECTID="36"
-          export REPO_INIT="repo init -u https://github.com/accupara/los20.git -b lineage-20.0 --git-lfs --depth=1"
-        ;;
-        "CipherOS 14")
-          export PROJECTFOLDER="/crave-devspaces/Cipher14"
-          export PROJECTID="79"
-          export REPO_INIT="repo init -u https://github.com/CipherOS/android_manifest.git -b fourteen --git-lfs --depth=1"
-        ;;
-        "PixelOS 14")
-          export PROJECTFOLDER="/crave-devspaces/Pixel14"
-          export PROJECTID="82"
-          export REPO_INIT="repo init -u https://github.com/PixelOS-AOSP/manifest.git -b fourteen --git-lfs --depth=1"
-        ;;
-        "LineageOS 16.0")
-          export PROJECTFOLDER="/crave-devspaces/Lineage16"
-          export PROJECTID="81"
-          export REPO_INIT="repo init -u https://github.com/accupara/los16.git -b lineage-16.0 --git-lfs --depth=1"
-        ;;
-        "CyanogenMOD 14.1")
-          export PROJECTFOLDER="/crave-devspaces/Cyanogen14"
-          export PROJECTID="83"
-          export REPO_INIT="repo init -u https://github.com/accupara/los-cm14.1.git -b cm-14.1 --git-lfs --depth=1"
+        "TWRP 12.1")
+          export PROJECTFOLDER="/crave-devspaces/TWRP12"
+          export PROJECTID="78"
+          export REPO_INIT="repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1 --depth=1"
         ;;
         esac
         echo "Building on ${{ github.event.inputs.BASE_PROJECT }} project"
@@ -305,7 +262,7 @@ jobs:
           cp crave.conf $PROJECTFOLDER
         fi
         if [[ -z "${{ secrets.CUSTOM_YAML }}" ]]; then
-          cp yamls/crave.yaml.aosp $PROJECTFOLDER/.repo/manifests/crave.yaml
+          cp yamls/crave.yaml.twrp.legacy $PROJECTFOLDER/.repo/manifests/crave.yaml
           echo "No Custom Configuration Found, Using Template!"
         else
           touch $PROJECTFOLDER/.repo/manifests/crave.yaml || true
@@ -356,7 +313,7 @@ jobs:
         /opt/crave/resync.sh  && \
 
         # Set up build environment
-        export BUILD_USERNAME=Hirokixd28 ; \
+        export BUILD_USERNAME=${{ github.actor }} ; \
         export BUILD_HOSTNAME=crave ; \
         source build/envsetup.sh && \
 
@@ -392,7 +349,7 @@ jobs:
         cd $PROJECTFOLDER
         echo "${{ secrets.GITHUB_TOKEN }}" > token.txt
         crave push token.txt -d $(crave ssh -- pwd | grep -v Select | sed -s 's/\r//g')/
-        crave ssh -- "export GH_UPLOAD_LIMIT="${{ secrets.GH_UPLOAD_LIMIT }}"; bash /opt/crave/github-actions/upload.sh '${{ github.run_id }}' '${{ github.event.inputs.DEVICE_NAME }}'  '${{ github.repository }}' '${{ github.event.inputs.PRODUCT_NAME }}-${{ github.run_id }}' '${{ secrets.EXTRA_FILES }}'"
+        crave ssh -- "bash /opt/crave/github-actions/upload.sh '${{ github.run_id }}' '${{ github.event.inputs.DEVICE_NAME }}'  '${{ github.repository }}' '${{ github.event.inputs.PRODUCT_NAME }}-${{ github.run_id }}' '${{ secrets.EXTRA_FILES }}'"
 
       # Pull Errors and Display them
     - name: Display error.log
